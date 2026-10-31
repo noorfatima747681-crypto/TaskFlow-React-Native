@@ -1,98 +1,416 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import { useTasks } from '@/context/TaskContext';
 
 export default function HomeScreen() {
+  const { tasks } = useTasks();
+
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(task => task.done).length;
+  const pendingTasks = totalTasks - completedTasks;
+
+  const progress = totalTasks > 0
+    ? (completedTasks / totalTasks) * 100
+    : 0;
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Welcome back 👋</Text>
+            <Text style={styles.heading}>TaskFlow</Text>
+          </View>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+          <View style={styles.profile}>
+            <Text style={styles.profileText}>TF</Text>
+          </View>
+        </View>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        {/* Welcome Banner */}
+        <View style={styles.banner}>
+          <Text style={styles.bannerTag}>YOUR DAILY PLANNER</Text>
+
+          <Text style={styles.bannerTitle}>
+            Make today count!
+          </Text>
+
+          <Text style={styles.bannerText}>
+            Stay focused, manage your tasks and achieve your goals.
+          </Text>
+
+          <View style={styles.bannerBottom}>
+            <Text style={styles.bannerBottomText}>
+              Keep moving forward ✨
+            </Text>
+          </View>
+        </View>
+
+        {/* Overview */}
+        <Text style={styles.sectionTitle}>Overview</Text>
+
+        <View style={styles.stats}>
+          <View style={styles.card}>
+            <Text style={styles.statIcon}>📋</Text>
+            <Text style={styles.number}>{totalTasks}</Text>
+            <Text style={styles.cardText}>Total Tasks</Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.statIcon}>✓</Text>
+            <Text style={styles.number}>{completedTasks}</Text>
+            <Text style={styles.cardText}>Completed</Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.statIcon}>⏳</Text>
+            <Text style={styles.number}>{pendingTasks}</Text>
+            <Text style={styles.cardText}>Pending</Text>
+          </View>
+        </View>
+
+        {/* Progress */}
+        <View style={styles.progressCard}>
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressTitle}>Your Progress</Text>
+            <Text style={styles.progressPercent}>
+              {Math.round(progress)}%
+            </Text>
+          </View>
+
+          <View style={styles.progressBackground}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${progress}%` },
+              ]}
+            />
+          </View>
+
+          <Text style={styles.progressText}>
+            {completedTasks} out of {totalTasks} tasks completed
+          </Text>
+        </View>
+
+        {/* Today's Tasks */}
+        <View style={styles.taskHeader}>
+          <Text style={styles.sectionTitle}>Today's Tasks</Text>
+          <Text style={styles.taskCount}>
+            {totalTasks} Tasks
+          </Text>
+        </View>
+
+        {tasks.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No tasks yet!</Text>
+            <Text style={styles.emptyText}>
+              Add your first task to get started.
+            </Text>
+          </View>
+        ) : (
+          tasks.map(task => (
+            <View style={styles.task} key={task.id}>
+              <View style={[
+                styles.taskIndicator,
+                task.done && styles.taskIndicatorDone,
+              ]}>
+                <Text style={styles.taskCheck}>
+                  {task.done ? '✓' : '•'}
+                </Text>
+              </View>
+
+              <View style={styles.taskInfo}>
+                <Text
+                  style={[
+                    styles.taskTitle,
+                    task.done && styles.completed,
+                  ]}
+                >
+                  {task.title}
+                </Text>
+
+                <Text style={styles.taskTime}>
+                  {task.time}  •  {task.category}
+                </Text>
+              </View>
+
+              <View style={[
+                styles.statusBadge,
+                task.done ? styles.doneBadge : styles.pendingBadge,
+              ]}>
+                <Text style={[
+                  styles.statusText,
+                  task.done ? styles.doneText : styles.pendingText,
+                ]}>
+                  {task.done ? 'Done' : 'Pending'}
+                </Text>
+              </View>
+            </View>
+          ))
+        )}
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Made with TaskFlow ✨
+          </Text>
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#F7F5ED',
+  },
+  header: {
     flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    marginHorizontal: 22,
+    marginTop: 18,
+    marginBottom: 22,
   },
-  heroSection: {
+  greeting: {
+    fontSize: 14,
+    color: '#718078',
+  },
+  heading: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    color: '#263F36',
+    marginTop: 4,
+  },
+  profile: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#DCE7DC',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  profileText: {
+    color: '#315C50',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  banner: {
+    backgroundColor: '#315C50',
+    marginHorizontal: 20,
+    padding: 23,
+    borderRadius: 20,
+  },
+  bannerTag: {
+    color: '#DCE7DC',
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  bannerTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 12,
+  },
+  bannerText: {
+    color: '#E5EEE6',
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 8,
+  },
+  bannerBottom: {
+    marginTop: 20,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#648477',
+  },
+  bannerBottomText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#263F36',
+    marginHorizontal: 20,
+    marginTop: 27,
+    marginBottom: 15,
+  },
+  stats: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    gap: 10,
+  },
+  card: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    paddingHorizontal: 10,
+    borderRadius: 15,
+    elevation: 2,
   },
-  title: {
-    textAlign: 'center',
+  statIcon: {
+    fontSize: 19,
+    color: '#315C50',
   },
-  code: {
-    textTransform: 'uppercase',
+  number: {
+    fontSize: 25,
+    fontWeight: 'bold',
+    color: '#263F36',
+    marginTop: 10,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  cardText: {
+    fontSize: 11,
+    color: '#718078',
+    marginTop: 5,
+  },
+  progressCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginTop: 20,
+    padding: 19,
+    borderRadius: 16,
+    elevation: 2,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  progressTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#263F36',
+  },
+  progressPercent: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#315C50',
+  },
+  progressBackground: {
+    height: 9,
+    backgroundColor: '#DCE7DC',
+    borderRadius: 10,
+    marginTop: 15,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#315C50',
+    borderRadius: 10,
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#718078',
+    marginTop: 10,
+  },
+  taskHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  taskCount: {
+    color: '#315C50',
+    fontSize: 13,
+    fontWeight: '600',
+    marginRight: 20,
+    marginTop: 12,
+  },
+  task: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 15,
+    borderRadius: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 1,
+  },
+  taskIndicator: {
+    width: 35,
+    height: 35,
+    borderRadius: 11,
+    backgroundColor: '#E8EFE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  taskIndicatorDone: {
+    backgroundColor: '#DCE7DC',
+  },
+  taskCheck: {
+    fontSize: 19,
+    fontWeight: 'bold',
+    color: '#315C50',
+  },
+  taskInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  taskTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#263F36',
+  },
+  completed: {
+    textDecorationLine: 'line-through',
+    color: '#999999',
+  },
+  taskTime: {
+    fontSize: 11,
+    color: '#718078',
+    marginTop: 6,
+  },
+  statusBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  doneBadge: {
+    backgroundColor: '#DCE7DC',
+  },
+  pendingBadge: {
+    backgroundColor: '#F5EAD5',
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  doneText: {
+    color: '#315C50',
+  },
+  pendingText: {
+    color: '#956B2D',
+  },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    padding: 25,
+    borderRadius: 15,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#263F36',
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#718078',
+    marginTop: 7,
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  footerText: {
+    color: '#8A968D',
+    fontSize: 12,
   },
 });

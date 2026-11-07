@@ -1,3 +1,4 @@
+
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
 # dependencies
@@ -30,13 +31,13 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# local env files - keep API keys private
+.env
+.env.*
+!.env.example
 
 # typescript
 *.tsbuildinfo
-
-example
 
 # generated native folders
 /ios

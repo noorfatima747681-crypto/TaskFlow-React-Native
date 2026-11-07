@@ -6,12 +6,13 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTasks } from '@/context/TaskContext';
 
 export default function TasksScreen() {
-  const { tasks, toggleTask } = useTasks();
+  const { tasks, toggleTask, deleteTask } = useTasks();
 
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
@@ -19,7 +20,24 @@ export default function TasksScreen() {
     task => task.id === selectedTaskId
   );
 
-  // Task Details View
+  const handleDelete = (id: number) => {
+    Alert.alert(
+      'Delete Task',
+      'Are you sure you want to delete this task?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteTask(id);
+            setSelectedTaskId(null);
+          },
+        },
+      ]
+    );
+  };
+
   if (selectedTask) {
     return (
       <SafeAreaView style={styles.container}>
@@ -27,33 +45,25 @@ export default function TasksScreen() {
           style={styles.backButton}
           onPress={() => setSelectedTaskId(null)}
         >
-          <Text style={styles.backText}>‹  Back to My Tasks</Text>
+          <Text style={styles.backText}>‹ Back to My Tasks</Text>
         </Pressable>
 
         <Text style={styles.heading}>Task Details</Text>
-        <Text style={styles.subtitle}>
-          View your task information
-        </Text>
+        <Text style={styles.subtitle}>View your task information</Text>
 
         <View style={styles.detailCard}>
           <Text style={styles.detailLabel}>TASK TITLE</Text>
-          <Text style={styles.detailTitle}>
-            {selectedTask.title}
-          </Text>
+          <Text style={styles.detailTitle}>{selectedTask.title}</Text>
 
           <View style={styles.detailDivider} />
 
           <Text style={styles.detailLabel}>CATEGORY</Text>
-          <Text style={styles.detailValue}>
-            {selectedTask.category}
-          </Text>
+          <Text style={styles.detailValue}>{selectedTask.category}</Text>
 
           <View style={styles.detailDivider} />
 
           <Text style={styles.detailLabel}>TIME</Text>
-          <Text style={styles.detailValue}>
-            {selectedTask.time}
-          </Text>
+          <Text style={styles.detailValue}>{selectedTask.time}</Text>
 
           <View style={styles.detailDivider} />
 
@@ -67,17 +77,21 @@ export default function TasksScreen() {
             onPress={() => toggleTask(selectedTask.id)}
           >
             <Text style={styles.completeButtonText}>
-              {selectedTask.done
-                ? 'Mark as Pending'
-                : 'Mark as Completed'}
+              {selectedTask.done ? 'Mark as Pending' : 'Mark as Completed'}
             </Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.deleteButton}
+            onPress={() => handleDelete(selectedTask.id)}
+          >
+            <Text style={styles.deleteButtonText}>Delete Task</Text>
           </Pressable>
         </View>
       </SafeAreaView>
     );
   }
 
-  // My Tasks View
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -115,13 +129,21 @@ export default function TasksScreen() {
               </Text>
 
               <Text style={styles.taskDetails}>
-                {task.category}  •  {task.time}
+                {task.category} • {task.time}
               </Text>
+            </Pressable>
+
+            <Pressable onPress={() => handleDelete(task.id)}>
+              <Text style={styles.deleteIcon}>×</Text>
             </Pressable>
 
             <Text style={styles.arrow}>›</Text>
           </View>
         ))}
+
+        {tasks.length === 0 && (
+          <Text style={styles.footer}>No tasks available. Add a new task!</Text>
+        )}
 
         <Text style={styles.footer}>
           Tap a task to view its details
@@ -211,6 +233,13 @@ const styles = StyleSheet.create({
   arrow: {
     fontSize: 25,
     color: '#315C50',
+    marginLeft: 8,
+  },
+  deleteIcon: {
+    fontSize: 24,
+    color: '#D9534F',
+    fontWeight: 'bold',
+    paddingHorizontal: 8,
   },
   footer: {
     textAlign: 'center',
@@ -263,6 +292,18 @@ const styles = StyleSheet.create({
     marginTop: 25,
   },
   completeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  deleteButton: {
+    backgroundColor: '#D9534F',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  deleteButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: 'bold',

@@ -3,8 +3,12 @@ import React, {
   createContext,
   useContext,
   useState,
+  useEffect,
   ReactNode,
 } from 'react';
+
+import { Alert } from 'react-native';
+import { supabase } from '../../lib/supabase/client';
 
 export type Task = {
   id: number;
@@ -12,79 +16,130 @@ export type Task = {
   category: string;
   time: string;
   done: boolean;
+  user_id?: string;
 };
 
 type TaskContextType = {
   tasks: Task[];
-  addTask: (title: string, category: string, time: string) => void;
-  toggleTask: (id: number) => void;
+  loading: boolean;
+  addTask: (task: Task) => void;
+  toggleTask: (id: number) => Promise<void>;
+  deleteTask: (id: number) => Promise<void>;
 };
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
-const initialTasks: Task[] = [
-  {
-    id: 1,
-    title: 'Complete assignment',
-    category: 'Study',
-    time: '10:00 AM',
-    done: false,
-  },
-  {
-    id: 2,
-    title: 'Read React Native notes',
-    category: 'Learning',
-    time: '02:00 PM',
-    done: false,
-  },
-  {
-    id: 3,
-    title: 'Prepare presentation',
-    category: 'Work',
-    time: '04:00 PM',
-    done: true,
-  },
-  {
-    id: 4,
-    title: 'Plan tomorrow',
-    category: 'Personal',
-    time: '06:00 PM',
-    done: false,
-  },
-  {
-    id: 5,
-    title: 'Complete React Native Project',
-    category: 'Study',
-    time: '08:00 PM',
-    done: false,
-  },
-];
-
 export function TaskProvider({ children }: { children: ReactNode }) {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const addTask = (title: string, category: string, time: string) => {
-    const newTask: Task = {
-      id: Date.now(),
-      title,
-      category,
-      time,
-      done: false,
-    };
+  const fetchTasks = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    setTasks(currentTasks => [...currentTasks, newTask]);
+      if (!user) {
+        setTasks([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.log('Fetch Tasks Error:', error.message);
+        return;
+      }
+
+      setTasks(data || []);
+    } catch (error) {
+      console.log('Fetch Error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleTask = (id: number) => {
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const addTask = (task: Task) => {
+    setTasks(currentTasks => [task, ...currentTasks]);
+  };
+
+  const toggleTask = async (id: number) => {
+    const task = tasks.find(item => item.id === id);
+    if (!task) return;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      Alert.alert('Error', 'Please sign in first.');
+      return;
+    }
+
+    const newStatus = !task.done;
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({ done: newStatus })
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select('id, done')
+      .maybeSingle();
+
+    if (error || !data) {
+      Alert.alert('Error', error?.message || 'Task update failed.');
+      return;
+    }
+
     setTasks(currentTasks =>
-      currentTasks.map(task =>
-        task.id === id ? { ...task, done: !task.done } : task
+      currentTasks.map(item =>
+        item.id === id ? { ...item, done: data.done } : item
       )
     );
   };
 
+  const deleteTask = async (id: number) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      Alert.alert('Error', 'Please sign in first.');
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select('id')
+      .maybeSingle();
+
+    if (error || !data) {
+      Alert.alert('Delete Error', error?.message || 'Task could not be deleted.');
+      return;
+    }
+
+    setTasks(currentTasks =>
+      currentTasks.filter(item => item.id !== id)
+    );
+
+    Alert.alert('Success', 'Task deleted successfully.');
+  };
+
   return (
-    <TaskContext.Provider value={{ tasks, addTask, toggleTask }}>
+    <TaskContext.Provider
+      value={{ tasks, loading, addTask, toggleTask, deleteTask }}
+    >
       {children}
     </TaskContext.Provider>
   );

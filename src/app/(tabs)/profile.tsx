@@ -4,15 +4,47 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTasks } from '@/context/TaskContext';
+import { supabase } from '../../../lib/supabase/client';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 
 export default function ProfileScreen() {
   const { tasks } = useTasks();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const completedTasks = tasks.filter(task => task.done).length;
   const pendingTasks = tasks.length - completedTasks;
+
+  const handleSignOut = async () => {
+    setLoading(true);
+
+    const { error } = await supabase.auth.signOut();
+
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Error', error.message);
+      return;
+    }
+
+router.replace('/sign-in' as any);  };
+
+  const confirmSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Yes, Sign Out', onPress: handleSignOut },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -64,6 +96,16 @@ export default function ProfileScreen() {
 
           <Text style={styles.version}>App Version 1.0.0</Text>
         </View>
+
+        <TouchableOpacity
+          style={styles.signOutButton}
+          onPress={confirmSignOut}
+          disabled={loading}
+        >
+          <Text style={styles.signOutText}>
+            {loading ? 'Signing Out...' : 'Sign Out'}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -150,7 +192,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
-    marginBottom: 30,
+    marginBottom: 20,
   },
   infoTitle: {
     fontSize: 18,
@@ -171,5 +213,17 @@ const styles = StyleSheet.create({
   version: {
     fontSize: 13,
     color: '#718078',
+  },
+  signOutButton: {
+    backgroundColor: '#C0392B',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  signOutText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

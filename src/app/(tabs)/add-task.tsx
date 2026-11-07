@@ -11,26 +11,64 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTasks } from '@/context/TaskContext';
+import { supabase } from '../../../lib/supabase/client';
 
 export default function AddTaskScreen() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Study');
   const [time, setTime] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const { addTask } = useTasks();
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (!title.trim() || !time.trim()) {
       Alert.alert('Missing Information', 'Please enter task name and time.');
       return;
     }
 
-    addTask(title.trim(), category, time.trim());
+    setLoading(true);
 
-    Alert.alert('Success', 'Your task has been added!');
-    setTitle('');
-    setTime('');
-    setCategory('Study');
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        Alert.alert('Error', 'Please sign in first.');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('tasks')
+        .insert({
+          title: title.trim(),
+          category,
+          time: time.trim(),
+          done: false,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        Alert.alert('Database Error', error.message);
+        return;
+      }
+
+      addTask(data);
+
+      Alert.alert('Success', 'Your task has been saved!');
+
+      setTitle('');
+      setTime('');
+      setCategory('Study');
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -81,8 +119,14 @@ export default function AddTaskScreen() {
             onChangeText={setTime}
           />
 
-          <Pressable style={styles.addButton} onPress={handleAddTask}>
-            <Text style={styles.addButtonText}>+ Add Task</Text>
+          <Pressable
+            style={styles.addButton}
+            onPress={handleAddTask}
+            disabled={loading}
+          >
+            <Text style={styles.addButtonText}>
+              {loading ? 'Saving...' : '+ Add Task'}
+            </Text>
           </Pressable>
         </View>
       </ScrollView>
